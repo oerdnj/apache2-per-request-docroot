@@ -31,3 +31,4 @@
 200_cp_suexec.dpatch
 201_build_suexec-custom.dpatch
 202_suexec-custom.dpatch
+203_per_request_docroot.dpatch
