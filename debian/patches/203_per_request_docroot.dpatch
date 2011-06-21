@@ -1,7 +1,14 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 203_suexec-custom.dpatch by Ondřej Surý <ondrej@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: the patch to make document root per request variable
+
+@DPATCH@
 Index: server/core.c
 ===================================================================
---- server/core.c	(revision 965372)
-+++ server/core.c	(working copy)
+--- trunk~/server/core.c	(revision 960840)
++++ trunk/server/core.c	(working copy)
 @@ -717,11 +717,15 @@
  AP_DECLARE(const char *) ap_document_root(request_rec *r) /* Don't use this! */
  {
@@ -21,8 +28,8 @@ Index: server/core.c
 +    return r->document_root;
  }
  
- /* Should probably just get rid of this... the only code that cares is
-@@ -3521,7 +3525,7 @@
+ AP_DECLARE(const apr_array_header_t *) ap_requires(request_rec *r)
+@@ -3517,7 +3521,7 @@
          while (*path == '/') {
              ++path;
          }
@@ -31,7 +38,7 @@ Index: server/core.c
                                       APR_FILEPATH_TRUENAME
                                     | APR_FILEPATH_SECUREROOT, r->pool))
                      != APR_SUCCESS) {
-@@ -3544,7 +3548,7 @@
+@@ -3540,7 +3544,7 @@
          while (*path == '/') {
              ++path;
          }
@@ -42,17 +49,17 @@ Index: server/core.c
                      != APR_SUCCESS) {
 Index: server/protocol.c
 ===================================================================
---- server/protocol.c	(revision 965372)
-+++ server/protocol.c	(working copy)
-@@ -866,6 +866,7 @@
+--- trunk~/server/protocol.c	(revision 960840)
++++ trunk/server/protocol.c	(working copy)
+@@ -843,6 +843,7 @@
      apr_bucket_brigade *tmp_bb;
      apr_socket_t *csd;
      apr_interval_time_t cur_timeout;
 +    core_server_config *server_conf;
  
- 
      apr_pool_create(&p, conn->pool);
-@@ -910,6 +911,12 @@
+     apr_pool_tag(p, "request");
+@@ -885,6 +886,12 @@
       */
      r->used_path_info = AP_REQ_DEFAULT_PATH_INFO;
  
@@ -67,11 +74,11 @@ Index: server/protocol.c
      /* Get the request... */
 Index: server/request.c
 ===================================================================
---- server/request.c	(revision 965372)
-+++ server/request.c	(working copy)
-@@ -1693,6 +1693,10 @@
-     /* Pass on the kept body (if any) into the new request. */
-     rnew->kept_body = r->kept_body;
+--- trunk~/server/request.c	(revision 960840)
++++ trunk/server/request.c	(working copy)
+@@ -1587,6 +1587,10 @@
+      */
+     rnew->used_path_info = AP_REQ_DEFAULT_PATH_INFO;
  
 +    /* Copy DocumentRoot to sub-request
 +     */
@@ -82,29 +89,21 @@ Index: server/request.c
  
 Index: modules/http/http_request.c
 ===================================================================
---- modules/http/http_request.c	(revision 965372)
-+++ modules/http/http_request.c	(working copy)
-@@ -456,6 +456,7 @@
-     new->hostname        = r->hostname;
-     new->request_time    = r->request_time;
-     new->main            = r->main;
-+    new->document_root   = r->document_root;
+--- trunk~/modules/http/http_request.c	(revision 960840)
++++ trunk/modules/http/http_request.c	(working copy)
+@@ -402,6 +402,8 @@
+     new->output_filters  = new->proto_output_filters;
+     new->input_filters   = new->proto_input_filters;
  
-     new->headers_in      = r->headers_in;
-     new->headers_out     = apr_table_make(r->pool, 12);
-@@ -558,6 +559,8 @@
-     r->content_encoding = rr->content_encoding;
-     r->content_languages = rr->content_languages;
-     r->per_dir_config = rr->per_dir_config;
-+    r->document_root = rr->document_root;
++    new->document_root   = r->document_root;
 +
-     /* copy output headers from subrequest, but leave negotiation headers */
-     r->notes = apr_table_overlay(r->pool, rr->notes, r->notes);
-     r->headers_out = apr_table_overlay(r->pool, rr->headers_out,
+     if (new->main) {
+         /* Add back the subrequest filter, which we lost when
+          * we set output_filters to include only the protocol
 Index: modules/mappers/mod_vhost_alias.c
 ===================================================================
---- modules/mappers/mod_vhost_alias.c	(revision 965372)
-+++ modules/mappers/mod_vhost_alias.c	(working copy)
+--- trunk~/modules/mappers/mod_vhost_alias.c	(revision 960840)
++++ trunk/modules/mappers/mod_vhost_alias.c	(working copy)
 @@ -373,11 +373,12 @@
      }
  
@@ -122,20 +121,15 @@ Index: modules/mappers/mod_vhost_alias.c
  static int mva_translate(request_rec *r)
 Index: include/httpd.h
 ===================================================================
---- include/httpd.h	(revision 965372)
-+++ include/httpd.h	(working copy)
-@@ -996,6 +996,14 @@
-     apr_uri_t parsed_uri;
-     /**  finfo.protection (st_mode) set to zero if no such file */
-     apr_finfo_t finfo;
-+
-+    /* Various config pulled from r->server which could be set by
-+     * vhost modules
-+     */
-+
+--- trunk~/include/httpd.h	(revision 960840)
++++ trunk/include/httpd.h	(working copy)
+@@ -999,6 +999,9 @@
+     /** A flag to determine if the eos bucket has been sent yet */
+     int eos_sent;
+ 
 +    /** Where is the per requests document root **/
 +    const char *document_root;
 +
- };
- 
- /**
+ /* Things placed at the end of the record to avoid breaking binary
+  * compatibility.  It would be nice to remember to reorder the entire
+  * record to improve 64bit alignment the next time we need to break
