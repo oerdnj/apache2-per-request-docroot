@@ -1,4 +1,4 @@
-apache2 (2.2.16-6+squeeze1+prd) stable-security; urgency=low
+apache2 (2.2.16-6+squeeze1+prd) m-v-l; urgency=low
 
   * Apply per request document root
 
