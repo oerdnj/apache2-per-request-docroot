@@ -1,3 +1,9 @@
+apache2 (2.2.16-6+squeeze1+prd) stable-security; urgency=low
+
+  * Apply per request document root
+
+ -- Ondřej Surý <ondrej@debian.org>  Tue, 21 Jun 2011 13:45:01 +0200
+
 apache2 (2.2.16-6+squeeze1) stable-security; urgency=high
 
   * Fix CVE-2011-1176 in apache2-mpm-itk: If NiceValue was set, the default
